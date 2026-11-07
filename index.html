@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NES Emulator Test UI</title>
+  <style>
+    :root {
+      --bg: #101722;
+      --panel: #172337;
+      --text: #eaf2ff;
+      --muted: #9ab0cd;
+      --accent: #4eb5ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Noto Sans", sans-serif;
+      background: radial-gradient(circle at 15% 0%, #1f3353 0%, var(--bg) 45%);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .app {
+      width: min(1220px, 100%);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 14px;
+    }
+    .screen-wrap {
+      background: var(--panel);
+      border: 1px solid #2b3f60;
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 10px 32px rgba(0,0,0,0.28);
+      min-width: 0;
+    }
+    canvas {
+      width: 100%;
+      max-width: 768px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      border: 1px solid #27456c;
+      background: #000;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto;
+      aspect-ratio: 256 / 240;
+    }
+    .controls {
+      background: var(--panel);
+      border: 1px solid #2b3f60;
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      box-shadow: 0 10px 32px rgba(0,0,0,0.28);
+      min-width: 0;
+    }
+    .card {
+      background: #122038;
+      border: 1px solid #22385a;
+      border-radius: 8px;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    button, input[type="file"] {
+      font: inherit;
+    }
+    input[type="file"] { max-width: 100%; }
+    button {
+      border: 1px solid #2f5b8f;
+      background: linear-gradient(180deg, #2f6eac, #225b90);
+      color: #fff;
+      border-radius: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .muted { color: var(--muted); font-size: 13px; }
+    code { color: var(--accent); }
+    @media (max-width: 1100px) { .app { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="screen-wrap">
+      <canvas id="screen" width="256" height="240"></canvas>
+    </div>
+    <aside class="controls">
+      <div class="card">
+        <label for="romInput"><strong>Load ROM (.nes)</strong></label>
+        <input id="romInput" type="file" accept=".nes" />
+        <div class="row">
+          <button id="runBtn" disabled>Run</button>
+          <button id="pauseBtn" disabled>Pause</button>
+          <button id="resetBtn" disabled>Reset</button>
+          <button id="stepBtn" disabled>Step Frame</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>Input Recorder</strong>
+        <div class="row">
+          <button id="recStartBtn" disabled>Start Rec</button>
+          <button id="recStopBtn" disabled>Stop Rec</button>
+          <button id="recPlayBtn" disabled>Replay</button>
+        </div>
+        <div class="row">
+          <button id="recExportBtn" disabled>Export JSON</button>
+          <input id="recImportInput" type="file" accept=".json,application/json" />
+        </div>
+        <div id="recInfo" class="muted">No recording.</div>
+      </div>
+
+      <div class="card">
+        <strong>Status</strong>
+        <div id="status" class="muted">No ROM loaded.</div>
+        <div id="info" class="muted"></div>
+        <div id="debug" class="muted"></div>
+      </div>
+
+      <div class="card">
+        <strong>Keyboard</strong>
+        <div class="muted">D-Pad: Arrow Keys</div>
+        <div class="muted">A: <code>Z</code></div>
+        <div class="muted">B: <code>X</code></div>
+        <div class="muted">Start: <code>Enter</code></div>
+        <div class="muted">Select: <code>Shift</code></div>
+        <div class="muted">Audio starts after clicking <code>Run</code> (browser policy).</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Single-clock runtime modules -->
+  <script defer src="./src/bus-access.js"></script>
+  <script defer src="./src/cpu-phase-clock-state.js"></script>
+  <script defer src="./src/cpu-runtime-state.js"></script>
+  <script defer src="./src/cpu-data-bus.js"></script>
+  <script defer src="./src/cpu-bus-publication.js"></script>
+  <script defer src="./src/controller-bus.js"></script>
+  <script defer src="./src/interrupt-controller.js"></script>
+  <script defer src="./src/apu-frame-sequencer.js"></script>
+  <script defer src="./src/apu-domain.js"></script>
+  <script defer src="./src/mapper-a12-edge-filter.js"></script>
+  <script defer src="./src/mapper-base.js"></script>
+  <script defer src="./src/mapper4.js"></script>
+  <script defer src="./src/mapper-core.js"></script>
+  <script defer src="./src/ppu-background-state.js"></script>
+  <script defer src="./src/ppu-sprite-eval-state.js"></script>
+  <script defer src="./src/ppu-timing-state.js"></script>
+  <script defer src="./src/ppu-address-sequencer.js"></script>
+  <script defer src="./src/ppu-dot-phase.js"></script>
+  <script defer src="./src/ppu-io-pipeline.js"></script>
+  <script defer src="./src/ppu-background-pipeline.js"></script>
+  <script defer src="./src/ppu-sprite-pipeline.js"></script>
+  <script defer src="./src/ppu-dot-engine.js"></script>
+  <script defer src="./src/ppu-address-space.js"></script>
+  <script defer src="./src/ppu-register-bus.js"></script>
+  <script defer src="./src/io-register-map.js"></script>
+  <script defer src="./src/cpu-memory-map.js"></script>
+  <script defer src="./src/mister-dma-controller.js"></script>
+  <script defer src="./src/oam-dma-engine.js"></script>
+  <script defer src="./src/bus-arbiter.js"></script>
+  <script defer src="./src/master-clock-domain.js"></script>
+  <script defer src="./src/cpu-micro-sequencer.js"></script>
+  <script defer src="./src/cpu-opcode-table.js"></script>
+  <script defer src="./src/cpu6502.js"></script>
+  <script defer src="./src/execution-kernel.js"></script>
+  <script defer src="./src/nes-single-clock.js"></script>
+  <script defer src="./src/ines.js"></script>
+  <script defer src="./src/render.js"></script>
+  <script defer src="./src/nes.js"></script>
+  <script defer src="./src/emulation-backend-shared.js"></script>
+  <script defer src="./src/wasm-runtime.js"></script>
+  <script defer src="./src/wasm-emulation-backend.js"></script>
+  <script defer src="./src/emulation-backend.js"></script>
+  <script defer src="./src/browser-ui.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
